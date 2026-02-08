@@ -1,1 +1,117 @@
-SPLK ITSI DB
+| makeresults
+| eval service_name="Databricks Platform"
+| eval parent_service=null()
+| eval service_type="Business Service"
+| table service_name parent_service service_type
+
+| append [
+
+    /* Workspace Level */
+    | inputlookup databricks_workspaces.csv
+    | eval service_name="Workspace: ".workspace_name
+    | eval parent_service="Databricks Platform"
+    | eval service_type="Workspace"
+    | table service_name parent_service service_type workspace_name
+
+    /* Domain Layer */
+    | append [
+        | inputlookup databricks_workspaces.csv
+        | eval parent_service="Workspace: ".workspace_name
+        | eval service_name=mvappend(
+            "Control Plane Health",
+            "Compute Plane",
+            "Jobs & Workflows",
+            "DLT Pipelines",
+            "SQL Warehouses"
+          )
+        | mvexpand service_name
+        | eval service_name=service_name." - ".workspace_name
+        | eval parent_service=parent_service
+        | eval service_type="Domain"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Compute Subdomains */
+    | append [
+        | inputlookup databricks_workspaces.csv
+        | eval workspace="Workspace: ".workspace_name
+        | eval parent_compute="Compute Plane - ".workspace_name
+        | eval service_name=mvappend(
+            "Cluster Fleet",
+            "Node Fleet",
+            "Cloud Infra Dependencies"
+          )
+        | mvexpand service_name
+        | eval service_name=service_name." - ".workspace_name
+        | eval parent_service=parent_compute
+        | eval service_type="Sub-Domain"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Jobs & Workflow Subdomain */
+    | append [
+        | inputlookup databricks_workspaces.csv
+        | eval service_name="Workflow SLA (aggregated) - ".workspace_name
+        | eval parent_service="Jobs & Workflows - ".workspace_name
+        | eval service_type="Sub-Domain"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Downstream BI */
+    | append [
+        | inputlookup databricks_workspaces.csv
+        | eval service_name="Downstream BI Consumers - ".workspace_name
+        | eval parent_service="SQL Warehouses - ".workspace_name
+        | eval service_type="Sub-Domain"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Jobs */
+    | append [
+        | inputlookup databricks_jobs.csv
+        | eval service_name="Job: ".job_name." - ".workspace_name
+        | eval parent_service="Jobs & Workflows - ".workspace_name
+        | eval service_type="Job"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Pipelines */
+    | append [
+        | inputlookup databricks_pipelines.csv
+        | eval service_name="Pipeline: ".pipeline_name." - ".workspace_name
+        | eval parent_service="DLT Pipelines - ".workspace_name
+        | eval service_type="Pipeline"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+    /* Warehouses */
+    | append [
+        | inputlookup databricks_warehouses.csv
+        | eval service_name="Warehouse: ".warehouse_name." - ".workspace_name
+        | eval parent_service="SQL Warehouses - ".workspace_name
+        | eval service_type="Warehouse"
+        | table service_name parent_service service_type workspace_name
+    ]
+
+]
+
+| dedup service_name
+| table service_name parent_service service_type
+
+/* OUTPUT */
+Databricks Platform
+ └ Workspace: ws-prod
+    ├ Control Plane Health - ws-prod
+    ├ Compute Plane - ws-prod
+    │   ├ Cluster Fleet - ws-prod
+    │   ├ Node Fleet - ws-prod
+    │   └ Cloud Infra Dependencies - ws-prod
+    ├ Jobs & Workflows - ws-prod
+    │   ├ Workflow SLA (aggregated) - ws-prod
+    │   ├ Job: ingestion_job - ws-prod
+    │   └ Job: transform_job - ws-prod
+    ├ DLT Pipelines - ws-prod
+    │   └ Pipeline: bronze_to_silver - ws-prod
+    └ SQL Warehouses - ws-prod
+        ├ Warehouse: analytics_wh - ws-prod
+        └ Downstream BI Consumers - ws-prod
