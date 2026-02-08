@@ -12,7 +12,7 @@
 | eval workspace=split(workspace_list,",")
 | mvexpand workspace
 
-| comment "Create Root Service"
+| comment "Root Service"
 | append [
     | makeresults
     | eval service_name="Databricks"
@@ -21,15 +21,24 @@
     | table service_name parent_service service_type
 ]
 
-| comment "Workspace Layer"
+| comment "Workspaces Container Node"
+| append [
+    | makeresults
+    | eval service_name="Workspaces"
+    | eval parent_service="Databricks"
+    | eval service_type="Container"
+    | table service_name parent_service service_type
+]
+
+| comment "Individual Workspace Services"
 | appendpipe [
     | eval service_name="Workspace: ".workspace
-    | eval parent_service="Databricks"
+    | eval parent_service="Workspaces"
     | eval service_type="Workspace"
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Top Domains under Workspace"
+| comment "Top Domains under each Workspace"
 | appendpipe [
     | eval domain_list=mvappend(
         "Control Plane Health",
@@ -59,7 +68,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Workflow SLA Node"
+| comment "Workflow SLA Sub-Domain"
 | appendpipe [
     | eval service_name="Workflow SLA (aggregated) - ".workspace
     | eval parent_service="Jobs & Workflows - ".workspace
@@ -67,7 +76,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Downstream BI Node"
+| comment "Downstream BI Sub-Domain"
 | appendpipe [
     | eval service_name="Downstream BI Consumers - ".workspace
     | eval parent_service="SQL Warehouses - ".workspace
