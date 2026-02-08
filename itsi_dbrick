@@ -1,117 +1,119 @@
+| comment "Define workspace and component lists"
 | makeresults
-| eval service_name="Databricks Platform"
-| eval parent_service=null()
-| eval service_type="Business Service"
-| table service_name parent_service service_type
+| eval workspace_list="ws-prod,ws-dev"
+| eval jobs_ws_prod="ingestion_job,transform_job"
+| eval jobs_ws_dev="dev_job1"
+| eval pipelines_ws_prod="bronze_to_silver"
+| eval pipelines_ws_dev="dev_pipeline"
+| eval warehouses_ws_prod="analytics_wh"
+| eval warehouses_ws_dev="dev_wh"
 
+| comment "Expand workspaces"
+| eval workspace=split(workspace_list,",")
+| mvexpand workspace
+
+| comment "Create Root Business Service"
 | append [
-
-    /* Workspace Level */
-    | inputlookup databricks_workspaces.csv
-    | eval service_name="Workspace: ".workspace_name
-    | eval parent_service="Databricks Platform"
-    | eval service_type="Workspace"
-    | table service_name parent_service service_type workspace_name
-
-    /* Domain Layer */
-    | append [
-        | inputlookup databricks_workspaces.csv
-        | eval parent_service="Workspace: ".workspace_name
-        | eval service_name=mvappend(
-            "Control Plane Health",
-            "Compute Plane",
-            "Jobs & Workflows",
-            "DLT Pipelines",
-            "SQL Warehouses"
-          )
-        | mvexpand service_name
-        | eval service_name=service_name." - ".workspace_name
-        | eval parent_service=parent_service
-        | eval service_type="Domain"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Compute Subdomains */
-    | append [
-        | inputlookup databricks_workspaces.csv
-        | eval workspace="Workspace: ".workspace_name
-        | eval parent_compute="Compute Plane - ".workspace_name
-        | eval service_name=mvappend(
-            "Cluster Fleet",
-            "Node Fleet",
-            "Cloud Infra Dependencies"
-          )
-        | mvexpand service_name
-        | eval service_name=service_name." - ".workspace_name
-        | eval parent_service=parent_compute
-        | eval service_type="Sub-Domain"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Jobs & Workflow Subdomain */
-    | append [
-        | inputlookup databricks_workspaces.csv
-        | eval service_name="Workflow SLA (aggregated) - ".workspace_name
-        | eval parent_service="Jobs & Workflows - ".workspace_name
-        | eval service_type="Sub-Domain"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Downstream BI */
-    | append [
-        | inputlookup databricks_workspaces.csv
-        | eval service_name="Downstream BI Consumers - ".workspace_name
-        | eval parent_service="SQL Warehouses - ".workspace_name
-        | eval service_type="Sub-Domain"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Jobs */
-    | append [
-        | inputlookup databricks_jobs.csv
-        | eval service_name="Job: ".job_name." - ".workspace_name
-        | eval parent_service="Jobs & Workflows - ".workspace_name
-        | eval service_type="Job"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Pipelines */
-    | append [
-        | inputlookup databricks_pipelines.csv
-        | eval service_name="Pipeline: ".pipeline_name." - ".workspace_name
-        | eval parent_service="DLT Pipelines - ".workspace_name
-        | eval service_type="Pipeline"
-        | table service_name parent_service service_type workspace_name
-    ]
-
-    /* Warehouses */
-    | append [
-        | inputlookup databricks_warehouses.csv
-        | eval service_name="Warehouse: ".warehouse_name." - ".workspace_name
-        | eval parent_service="SQL Warehouses - ".workspace_name
-        | eval service_type="Warehouse"
-        | table service_name parent_service service_type workspace_name
-    ]
-
+    | makeresults
+    | eval service_name="Databricks Platform"
+    | eval parent_service=null()
+    | eval service_type="Business Service"
+    | table service_name parent_service service_type
 ]
 
+| comment "Workspace Layer"
+| appendpipe [
+    | eval service_name="Workspace: ".workspace
+    | eval parent_service="Databricks Platform"
+    | eval service_type="Workspace"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Domain Layer under each Workspace"
+| appendpipe [
+    | eval domain_list=mvappend(
+        "Control Plane Health",
+        "Compute Plane",
+        "Jobs & Workflows",
+        "DLT Pipelines",
+        "SQL Warehouses"
+      )
+    | mvexpand domain_list
+    | eval service_name=domain_list." - ".workspace
+    | eval parent_service="Workspace: ".workspace
+    | eval service_type="Domain"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Compute Sub-Domains"
+| appendpipe [
+    | eval compute_list=mvappend(
+        "Cluster Fleet",
+        "Node Fleet",
+        "Cloud Infra Dependencies"
+      )
+    | mvexpand compute_list
+    | eval service_name=compute_list." - ".workspace
+    | eval parent_service="Compute Plane - ".workspace
+    | eval service_type="Sub-Domain"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Workflow SLA Sub-Domain"
+| appendpipe [
+    | eval service_name="Workflow SLA (aggregated) - ".workspace
+    | eval parent_service="Jobs & Workflows - ".workspace
+    | eval service_type="Sub-Domain"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Downstream BI Sub-Domain"
+| appendpipe [
+    | eval service_name="Downstream BI Consumers - ".workspace
+    | eval parent_service="SQL Warehouses - ".workspace
+    | eval service_type="Sub-Domain"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Jobs per Workspace"
+| appendpipe [
+    | eval job_list=case(
+        workspace="ws-prod", split(jobs_ws_prod,","),
+        workspace="ws-dev", split(jobs_ws_dev,",")
+      )
+    | mvexpand job_list
+    | eval service_name="Job: ".job_list." - ".workspace
+    | eval parent_service="Jobs & Workflows - ".workspace
+    | eval service_type="Job"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "DLT Pipelines per Workspace"
+| appendpipe [
+    | eval pipeline_list=case(
+        workspace="ws-prod", split(pipelines_ws_prod,","),
+        workspace="ws-dev", split(pipelines_ws_dev,",")
+      )
+    | mvexpand pipeline_list
+    | eval service_name="Pipeline: ".pipeline_list." - ".workspace
+    | eval parent_service="DLT Pipelines - ".workspace
+    | eval service_type="Pipeline"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "SQL Warehouses per Workspace"
+| appendpipe [
+    | eval warehouse_list=case(
+        workspace="ws-prod", split(warehouses_ws_prod,","),
+        workspace="ws-dev", split(warehouses_ws_dev,",")
+      )
+    | mvexpand warehouse_list
+    | eval service_name="Warehouse: ".warehouse_list." - ".workspace
+    | eval parent_service="SQL Warehouses - ".workspace
+    | eval service_type="Warehouse"
+    | table service_name parent_service service_type workspace
+]
+
+| comment "Finalize and deduplicate"
 | dedup service_name
 | table service_name parent_service service_type
-
-/* OUTPUT */
-Databricks Platform
- └ Workspace: ws-prod
-    ├ Control Plane Health - ws-prod
-    ├ Compute Plane - ws-prod
-    │   ├ Cluster Fleet - ws-prod
-    │   ├ Node Fleet - ws-prod
-    │   └ Cloud Infra Dependencies - ws-prod
-    ├ Jobs & Workflows - ws-prod
-    │   ├ Workflow SLA (aggregated) - ws-prod
-    │   ├ Job: ingestion_job - ws-prod
-    │   └ Job: transform_job - ws-prod
-    ├ DLT Pipelines - ws-prod
-    │   └ Pipeline: bronze_to_silver - ws-prod
-    └ SQL Warehouses - ws-prod
-        ├ Warehouse: analytics_wh - ws-prod
-        └ Downstream BI Consumers - ws-prod
