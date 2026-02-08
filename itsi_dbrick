@@ -12,24 +12,24 @@
 | eval workspace=split(workspace_list,",")
 | mvexpand workspace
 
-| comment "Create Root Business Service"
+| comment "Create Root Service"
 | append [
     | makeresults
-    | eval service_name="Databricks Platform"
+    | eval service_name="Databricks"
     | eval parent_service=null()
-    | eval service_type="Business Service"
+    | eval service_type="Business"
     | table service_name parent_service service_type
 ]
 
 | comment "Workspace Layer"
 | appendpipe [
     | eval service_name="Workspace: ".workspace
-    | eval parent_service="Databricks Platform"
+    | eval parent_service="Databricks"
     | eval service_type="Workspace"
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Domain Layer under each Workspace"
+| comment "Top Domains under Workspace"
 | appendpipe [
     | eval domain_list=mvappend(
         "Control Plane Health",
@@ -45,7 +45,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Compute Sub-Domains"
+| comment "Compute Plane Sub-Domains"
 | appendpipe [
     | eval compute_list=mvappend(
         "Cluster Fleet",
@@ -59,7 +59,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Workflow SLA Sub-Domain"
+| comment "Workflow SLA Node"
 | appendpipe [
     | eval service_name="Workflow SLA (aggregated) - ".workspace
     | eval parent_service="Jobs & Workflows - ".workspace
@@ -67,7 +67,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Downstream BI Sub-Domain"
+| comment "Downstream BI Node"
 | appendpipe [
     | eval service_name="Downstream BI Consumers - ".workspace
     | eval parent_service="SQL Warehouses - ".workspace
@@ -75,7 +75,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Jobs per Workspace"
+| comment "Jobs under Jobs & Workflows"
 | appendpipe [
     | eval job_list=case(
         workspace="ws-prod", split(jobs_ws_prod,","),
@@ -88,7 +88,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "DLT Pipelines per Workspace"
+| comment "Pipelines under DLT Pipelines"
 | appendpipe [
     | eval pipeline_list=case(
         workspace="ws-prod", split(pipelines_ws_prod,","),
@@ -101,7 +101,7 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "SQL Warehouses per Workspace"
+| comment "Warehouses under SQL Warehouses"
 | appendpipe [
     | eval warehouse_list=case(
         workspace="ws-prod", split(warehouses_ws_prod,","),
@@ -114,6 +114,6 @@
     | table service_name parent_service service_type workspace
 ]
 
-| comment "Finalize and deduplicate"
+| comment "Finalize"
 | dedup service_name
 | table service_name parent_service service_type
