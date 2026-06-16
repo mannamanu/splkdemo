@@ -126,3 +126,30 @@
 | comment "Finalize"
 | dedup service_name
 | table service_name parent_service service_type
+
+| comment spath
+| spath
+| eval startDate=startDate, endDate=endDate
+
+| mvexpand groupLabels{} 
+| spath input=groupLabels{} path=groupProperty output=groupProperty
+| spath input=groupLabels{} path=groupLabels{} output=groupLabelObj
+
+| mvexpand groupLabelObj
+| spath input=groupLabelObj path=groupId output=groupId
+| spath input=groupLabelObj path=groupLabel output=groupLabel
+
+| mvexpand data.points{}
+| spath input=data.points{} path=timestamp output=timestamp
+| spath input=data.points{} path=value output=value
+| spath input=data.points{} path=numberOfDataPoints output=numberOfDataPoints
+| spath input=data.points{} path=groups{} output=pointGroup
+
+| mvexpand pointGroup
+| spath input=pointGroup path=groupProperty output=pg_property
+| spath input=pointGroup path=groupValue output=pg_value
+
+| where pg_property=groupProperty AND pg_value=groupId
+
+| table startDate endDate groupProperty groupId groupLabel timestamp value numberOfDataPoints
+
