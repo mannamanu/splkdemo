@@ -1,0 +1,32 @@
+| spath path=groupLabels{} output=groupLabelRoot
+| mvexpand groupLabelRoot
+| spath input=groupLabelRoot path=groupProperty output=groupProperty
+| spath input=groupLabelRoot path=groupLabels{} output=groupLabelObj
+| mvexpand groupLabelObj
+| spath input=groupLabelObj path=groupId output=groupId
+| spath input=groupLabelObj path=groupLabel output=groupLabel
+| table groupProperty groupId groupLabel
+| rename groupProperty AS join_gp groupId AS join_gid groupLabel AS join_label
+| eval join_key = join_gp . ":" . join_gid
+| outputlookup group_map_lookup
+
+
+| spath path=data.points{} output=pointObj
+| mvexpand pointObj
+
+| spath input=pointObj path=timestamp output=timestamp
+| spath input=pointObj path=value output=value
+| spath input=pointObj path=numberOfDataPoints output=numberOfDataPoints
+| spath input=pointObj path=groups{} output=pointGroup
+| mvexpand pointGroup
+
+| spath input=pointGroup path=groupProperty output=pg_property
+| spath input=pointGroup path=groupValue output=pg_value
+
+| eval join_key = pg_property . ":" . pg_value
+
+| lookup group_map_lookup join_key OUTPUT join_gp AS groupProperty, join_gid AS groupId, join_label AS groupLabel
+
+| where isnotnull(groupId)
+
+| table timestamp value numberOfDataPoints groupProperty groupId groupLabel
