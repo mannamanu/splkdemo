@@ -25,10 +25,6 @@
 
 | eval join_key = pg_property . ":" . pg_value
 
-temporal --profile cloud config set --prop address --value "quickstart-vadlapudi-usa76248.sjaym.tmprl.cloud:7233" ^
-&& temporal --profile cloud config set --prop namespace --value "quickstart-vadlapudi-usa76248.sjaym" ^
-&& temporal --profile cloud config set --prop api_key --value "yJhbGciOiJFUzI1NiIsICJraWQiOiJXdnR3YUEifQ.eyJhY2NvdW50X2lkIjoic2pheW0iLCAiYXVkIjpbInRlbXBvcmFsLmlvIl0sICJleHAiOjE4MDA1NDMwMzcsICJpc3MiOiJ0ZW1wb3JhbC5pbyIsICJqdGkiOiJjUEZGREtDWVF3c0JSbVNkYWdZMzM2aERhY0lXeWZzaSIsICJrZXlfaWQiOiJjUEZGREtDWVF3c0JSbVNkYWdZMzM2aERhY0lXeWZzaSIsICJzdWIiOiI5NDJjNDkwYzg3ZGY0ZDY0YTM5YWM1ZmMxZGJmZmRkMyJ9.EPO-f_znhdqoPtGmCRg2ntszcRxhK8Q-brCM-6Zi0_7eBjwQRl7You2hU81tT0Pardb1wWsrw8ldTxZL_zoBN"
-
 | lookup group_map_lookup join_key OUTPUT join_gp AS groupProperty, join_gid AS groupId, join_label AS groupLabel
 
 | where isnotnull(groupId)
