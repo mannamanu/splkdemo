@@ -31,20 +31,16 @@
 
 | table timestamp value numberOfDataPoints groupProperty groupId groupLabel
 
+.github/
+└── agents/
+    ├── migration-orchestrator.agent.md
+    ├── ehcache-migration-reviewer.agent.md
+    ├── migration-test-specialist.agent.md
+    └── package-and-build-reviewer.agent.md
 
-I have an existing automation test suite in this repository. Evaluate the current tests, identify the **one** test that most needs modification, and add a new test for it named with the suffix `_Devin` (e.g., `test_login_Devin`). Leave the original test untouched so the two can be compared side by side. Modifying only one test keeps the change small and reviewable.
-
-**Branch and ticket workflow**
-
-1. Pull the latest `master` branch before making any changes.
-2. Create a JIRA ticket describing the change: a clear summary, the reason the chosen test needed modification, and what the new `_Devin` test changes or fixes. If you have JIRA access through a tool or CLI, create the ticket directly. If not, give me the complete ticket text (title, description, acceptance criteria) ready to paste into JIRA.
-3. Create a working branch from the freshly pulled `master`, named with the JIRA ticket key (e.g., `PROJ-123-test-name-devin`). If no ticket key is available yet, use a descriptive branch name and tell me how to rename it once the ticket exists.
-4. Commit the new test to that branch with a commit message that references the JIRA ticket. Do not push to or modify `master`.
-
-**Evaluation**
-
-Review the existing tests for issues such as flakiness, brittle locators or hard-coded waits, missing assertions, poor coverage of the behavior under test, duplicated logic, and unclear naming. Choose the single test where a modification delivers the most value, and explain your selection in a short summary covering why you picked it, what is wrong with it, and what the `_Devin` version improves. Match the existing framework, language, conventions, and project structure so the new test fits in naturally.
-
-**Verification**
-
-Run the new `_Devin` test, along with the original if feasible, to confirm it passes and behaves as intended. Report the results, the final branch name, the JIRA ticket (or ticket text), and the list of files changed.
+source-services/
+├── service-a/
+├── service-b/
+└── excluded-services/
+    ├── legacy-service/
+    └── out-of-scope-service/
