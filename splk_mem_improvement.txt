@@ -31,16 +31,28 @@
 
 | table timestamp value numberOfDataPoints groupProperty groupId groupLabel
 
-.github/
-└── agents/
-    ├── migration-orchestrator.agent.md
-    ├── ehcache-migration-reviewer.agent.md
-    ├── migration-test-specialist.agent.md
-    └── package-and-build-reviewer.agent.md
+flowchart TD
+    START(["Quote Workflow starts"])
 
-source-services/
-├── service-a/
-├── service-b/
-└── excluded-services/
-    ├── legacy-service/
-    └── out-of-scope-service/
+    subgraph PRE["Intake Transformation Service Activities"]
+        P["1. preTransform"]
+        T["2. loadTPP"]
+        A["3. Authentication"]
+        Z["4. Authorization"]
+        P --> T --> A --> Z
+    end
+
+    subgraph QUOTE["Quote Service Activity"]
+        R["5. RateQuote — calls RateQuote HTTP API"]
+    end
+
+    subgraph POST["Intake Transformation Service Activity"]
+        X["6. postAuthTransform"]
+    end
+
+    END(["Quote Workflow completes with final XML"])
+
+    START --> P
+    Z -->|"Authorization response"| R
+    R -->|"Merged authorized request + rate quote"| X
+    X -->|"Final XML response"| END
